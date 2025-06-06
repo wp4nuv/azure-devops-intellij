@@ -1,5 +1,5 @@
-# **This project is no longer maintained.** 
-> To make changes, you may fork this repository and build your own version.
+# **The original project is no longer maintained.** 
+> I've forked this to build my own plugin and fix a startup problem.
 
 ---
 # Azure DevOps Plugin for IntelliJ, Android Studio, & other JetBrains IDEs
