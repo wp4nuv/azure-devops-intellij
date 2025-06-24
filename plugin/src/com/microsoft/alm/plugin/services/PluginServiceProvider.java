@@ -19,13 +19,13 @@ public class PluginServiceProvider {
     private CredentialsPrompt credentialsPrompt;
     private DeviceFlowResponsePrompt deviceFlowResponsePrompt;
     private PropertyService propertyService;
-    private LocalizationService localizationSerivce;
+    private LocalizationService localizationService;
     private HttpProxyService httpProxyService;
     private AsyncService asyncService;
     private CertificateService certificateService;
 
     private static class ProviderHolder {
-        private static PluginServiceProvider INSTANCE = new PluginServiceProvider();
+        private static final PluginServiceProvider INSTANCE = new PluginServiceProvider();
     }
 
     public static PluginServiceProvider getInstance() {
@@ -72,7 +72,7 @@ public class PluginServiceProvider {
         this.credentialsPrompt = credentialsPrompt;
         this.deviceFlowResponsePrompt = deviceFlowResponsePrompt;
         this.propertyService = propertyService;
-        this.localizationSerivce = localizationService;
+        this.localizationService = localizationService;
         this.httpProxyService = httpProxyService;
         this.asyncService = asyncService;
         this.certificateService = certificateService;
@@ -111,9 +111,9 @@ public class PluginServiceProvider {
 
     public LocalizationService getLocalizationService() {
         assert initialized;
-        assert localizationSerivce != null;
+        assert localizationService != null;
 
-        return localizationSerivce;
+        return localizationService;
     }
 
     public HttpProxyService getHttpProxyService() {

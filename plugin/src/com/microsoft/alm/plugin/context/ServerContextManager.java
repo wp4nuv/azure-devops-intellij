@@ -46,10 +46,7 @@ import java.util.Map;
 public class ServerContextManager {
     private static final Logger logger = LoggerFactory.getLogger(ServerContextManager.class);
 
-    private final String CONNECTION_DATA_REST_API_PATH = "/_apis/connectionData?connectOptions=IncludeServices&lastChangeId=-1&lastChangeId64=-1&api-version=1.0";
-    private final String TFS2015_NEW_SERVICE = "distributedtask";
-
-    private Map<String, ServerContext> contextMap = new HashMap<String, ServerContext>();
+    private final Map<String, ServerContext> contextMap = new HashMap<String, ServerContext>();
 
     private static class Holder {
         private static final ServerContextManager INSTANCE = new ServerContextManager(true);
@@ -80,8 +77,7 @@ public class ServerContextManager {
     }
 
     public synchronized ServerContext getLastUsedContext() {
-        final ServerContext context = get(getLastUsedContextKey());
-        return context;
+        return get(getLastUsedContextKey());
     }
 
     private void setLastUsedContextKey(String key) {
@@ -138,8 +134,7 @@ public class ServerContextManager {
 
     public synchronized ServerContext get(final String uri) {
         if (!StringUtils.isEmpty(uri)) {
-            final ServerContext context = contextMap.get(ServerContext.getKey(uri));
-            return context;
+            return contextMap.get(ServerContext.getKey(uri));
         }
 
         return null;
@@ -184,7 +179,7 @@ public class ServerContextManager {
     /**
      * Validates a provided server context and if validation succeeds saves a server context with the user's team foundation Id
      *
-     * @param context
+     * @param context Server Context
      */
     public ServerContext validateServerConnection(final ServerContext context) {
         Validator validator = new Validator(context);
@@ -272,6 +267,7 @@ public class ServerContextManager {
             } else {
                 urlForConnectionData = context.getServerUri().toString();
             }
+            String CONNECTION_DATA_REST_API_PATH = "/_apis/connectionData?connectOptions=IncludeServices&lastChangeId=-1&lastChangeId64=-1&api-version=1.0";
             final ConnectionData data = VstsHttpClient.sendRequest(context.getClient(),
                     urlForConnectionData.concat(CONNECTION_DATA_REST_API_PATH),
                     ConnectionData.class);
@@ -282,6 +278,7 @@ public class ServerContextManager {
 
             if (data.getLocationServiceData() != null && data.getLocationServiceData().getServiceDefinitions() != null) {
                 for (final ServiceDefinition s : data.getLocationServiceData().getServiceDefinitions()) {
+                    String TFS2015_NEW_SERVICE = "distributedtask";
                     if (StringUtils.equalsIgnoreCase(s.getServiceType(), TFS2015_NEW_SERVICE)) {
                         //TFS 2015 or higher, save the context with userId
                         final ServerContext contextWithUserId = new ServerContextBuilder(context)
@@ -324,12 +321,9 @@ public class ServerContextManager {
     public ServerContext getAuthenticatedContext(final String gitRemoteUrl, final boolean setAsActiveContext) {
         try {
             // get context from builder, create PersonalAccessToken if needed, and store in active context
-            final ServerContext context = createContextFromGitRemoteUrl(gitRemoteUrl);
-            if (context != null && setAsActiveContext) {
-                //nothing to do
-                //context is already added to the manager if it is valid
-            }
-            return context;
+            //nothing to do
+            //context is already added to the manager if it is valid
+            return createContextFromGitRemoteUrl(gitRemoteUrl);
         } catch (Throwable t) {
             logger.warn("getAuthenticatedContext unexpected exception", t);
         }
@@ -340,13 +334,19 @@ public class ServerContextManager {
      * Use this method to create a ServerContext from a remote git url.
      * Note that this will require server calls and should be done on a background thread.
      *
-     * @param gitRemoteUrl
-     * @return
+     * @param gitRemoteUrl The remote Git URL to use
+     * @return ServerContext
      */
     public ServerContext createContextFromGitRemoteUrl(final String gitRemoteUrl) {
         return createContextFromGitRemoteUrl(gitRemoteUrl, true);
     }
 
+    /**
+     *
+     * @param gitRemoteUrl The remote URL to use
+     * @param prompt T/F
+     * @return ServerContext
+     */
     public ServerContext createContextFromGitRemoteUrl(final String gitRemoteUrl, final boolean prompt) {
         ArgumentHelper.checkNotEmptyString(gitRemoteUrl, "gitRemoteUrl");
         // need to make sure not using an SSH url for authentication
@@ -392,7 +392,7 @@ public class ServerContextManager {
 
         // Get matching context from manager
         ServerContext context = get(tfvcServerUrlString);
-        logger.info("createContextFromTfvcServerUrl context exists: " + (context != null));
+        logger.info("createContextFromTfvcServerUrl context exists: {}", context != null);
         if (context == null || context.getServerUri() == null ||
                 context.getTeamProjectCollectionReference() == null ||
                 context.getTeamProjectCollectionReference().getName() == null ||
@@ -400,7 +400,7 @@ public class ServerContextManager {
                 context.getTeamProjectReference().getId() == null ||
                 !StringUtils.equalsIgnoreCase(context.getTeamProjectReference().getName(), teamProjectName)) {
             context = null;
-            logger.info("createContextFromTfvcServerUrl context fully populated: " + (context != null));
+            logger.info("createContextFromTfvcServerUrl context fully populated: {}", false);
         }
 
         if (context == null) {
@@ -414,7 +414,7 @@ public class ServerContextManager {
                 final ServerContext contextToValidate = new ServerContextBuilder()
                         .type(type).uri(tfvcServerUrl).authentication(authenticationInfo)
                         .teamProject(teamProjectName).build();
-                logger.info("type = " + type + ", uri = " + tfvcServerUrl + ", projectName = " + teamProjectName);
+                logger.info("type = {}, uri = {}, projectName = {}", type, tfvcServerUrl, teamProjectName);
                 try {
                     context = validateServerConnection(contextToValidate);
                 } catch (NotAuthorizedException e) {
@@ -429,7 +429,8 @@ public class ServerContextManager {
                                 .teamProject(teamProjectName).build();
                         context = validateServerConnection(contextToValidateRefreshed);
                     } else {
-                        logger.info("createContextFromTfvcServerUrl: Stale creds detected but feature does not allow prompting for refresh");
+                        logger.info("createContextFromTfvcServerUrl: Stale credentials detected but feature " +
+                                "does not allow prompting for refresh");
                     }
                 }
             } else {
@@ -511,17 +512,17 @@ public class ServerContextManager {
      * Takes existing contexts, creates new auth info for them, and creates new contexts with that info and all
      * other contexts that share that auth info and removes the old contexts from use
      *
-     * @param contexts
-     * @return
+     * @param contexts ServerContext list
      */
     public void updateServerContextsAuthInfo(final List<ServerContext> contexts) {
-        logger.info("updateServerContextsAuthInfo: starting with context count: " + contexts.size() + ", contextMap size: " + contextMap.size());
+        logger.info("updateServerContextsAuthInfo: starting with context count: {}, contextMap size: {}",
+                contexts.size(), contextMap.size());
         final HashMap<AuthenticationInfo, AuthenticationInfo> authInfoMap = new HashMap<AuthenticationInfo, AuthenticationInfo>(contexts.size());
         for (final ServerContext context : contexts) {
             authInfoMap.put(context.getAuthenticationInfo(), getNewAuthInfo(context));
         }
         refreshAuthInfo(authInfoMap);
-        logger.info("updateServerContextsAuthInfo: ending with contextMap size: " + contextMap.size());
+        logger.info("updateServerContextsAuthInfo: ending with contextMap size: {}", contextMap.size());
     }
 
     /**
@@ -534,7 +535,7 @@ public class ServerContextManager {
         for (final ServerContext context : getAllServerContexts()) {
             final AuthenticationInfo contextAuthInfo = context.getAuthenticationInfo();
             if (authInfoMap.containsKey(contextAuthInfo)) {
-                logger.info("refreshAuthInfo: Refreshing context auth info for: " + context.getKey());
+                logger.info("refreshAuthInfo: Refreshing context auth info for: {}", context.getKey());
                 remove(context.getKey());
                 add(new ServerContextBuilder(context).authentication(authInfoMap.get(contextAuthInfo)).build());
             }
@@ -559,7 +560,7 @@ public class ServerContextManager {
             url = context.getAuthenticationInfo().getServerUri();
         }
 
-        logger.info("Updating auth info with url: " + url);
+        logger.info("Updating auth info with url: {}", url);
         AuthenticationInfo newAuthInfo = AuthHelper.getAuthenticationInfoSynchronously(authenticationProvider, url);
         if (newAuthInfo != null) {
             // Creating a new authentication info object will replace the existing context with a newly constructed one
@@ -573,13 +574,13 @@ public class ServerContextManager {
 
     /**
      * Gets back the most updated context with auth info possible. It first checks to see if an existing context exists
-     * and if not it tries to create one. If the create fails (possibility auth info used was stale) then the auth info
-     * is updated and then we try to create the context again
+     * and if not it tries to create one. If the "create" fails (possibility auth info used was stale) then the auth info
+     * is updated, and then we try to create the context again
      * <p/>
      * TODO: Rip out this method and refactor the code to throw up the unauthorized exception instead of swallowing it
-     * TODO: so we can specifically retry on that and remove the bad cached creds
+     * TODO: so we can specifically retry on that and remove the bad cached credentials
      *
-     * @param remoteUrl
+     * @param remoteUrl The Remote URL to use
      * @return context
      */
     public ServerContext getUpdatedContext(final String remoteUrl, final boolean setAsActiveContext) {
@@ -593,7 +594,7 @@ public class ServerContextManager {
 
         // if the context was not obtained in the first try, update the auth info and try again if need be
         context = updateAuthenticationInfo(remoteUrl);
-        logger.info("getUpdatedContext updated auth info and found a context: " + (context == null ? "false" : "true"));
+        logger.info("getUpdatedContext updated auth info and found a context: {}", context == null ? "false" : "true");
         return context == null ? getAuthenticatedContext(remoteUrl, setAsActiveContext) : context;
     }
 
@@ -601,10 +602,10 @@ public class ServerContextManager {
      * Updates all contexts with matching authority in URI with new authentication info, will prompt the user
      * Has to be called on a background thread, will hang if called on UI thread
      *
-     * @param remoteUrl
+     * @param remoteUrl The Remote URL to use
      */
     public ServerContext updateAuthenticationInfo(final String remoteUrl) {
-        logger.info("Updating auth info for url " + remoteUrl);
+        logger.info("Updating auth info for url {}", remoteUrl);
         AuthenticationInfo newAuthenticationInfo = null;
         boolean promptUser = true;
         final URI remoteUri = UrlHelper.createUri(remoteUrl);
@@ -612,7 +613,7 @@ public class ServerContextManager {
 
         //Linear search through all contexts to find the ones with same authority as remoteUrl
         for (final ServerContext context : getAllServerContexts()) {
-            logger.info("auth info updateAuthenticationInfo compare " + context.getUri().getPath());
+            logger.info("auth info updateAuthenticationInfo compare {}", context.getUri().getPath());
             if (UrlHelper.haveSameAccount(remoteUri, context.getUri())) {
                 //remove the context with old credentials
                 remove(context.getKey());
@@ -634,7 +635,7 @@ public class ServerContextManager {
                     final ServerContextBuilder builder = new ServerContextBuilder(context);
                     builder.authentication(newAuthenticationInfo);
                     final ServerContext newContext = builder.build();
-                    logger.info(context.getUri().toString() + "       " + remoteUrl);
+                    logger.info("{}       {}", context.getUri().toString(), remoteUrl);
                     if (StringUtils.equalsIgnoreCase(context.getUri().toString(), remoteUrl)) {
                         logger.info("The updated auth info created a context that matches the remote url");
                         add(newContext, true);
@@ -647,16 +648,15 @@ public class ServerContextManager {
             }
         }
 
-        logger.info("auth info updateAuthenticationInfo returning an updated context: "
-                + (matchingContext == null ? "false" : "true"));
+        logger.info("auth info updateAuthenticationInfo returning an updated context: {}", matchingContext == null ? "false" : "true");
         return matchingContext;
     }
 
     /**
      * Use this method to get the appropriate AuthenticationProvider based on an url.
      *
-     * @param url
-     * @return
+     * @param url URL to authenticate against
+     * @return TfsAuthenticationProvider instance
      */
     public AuthenticationProvider getAuthenticationProvider(final String url) {
         if (UrlHelper.isTeamServicesUrl(url)) {
@@ -666,6 +666,9 @@ public class ServerContextManager {
         return TfsAuthenticationProvider.getInstance();
     }
 
+    /**
+     * Validator
+     */
     protected static class Validator implements UrlHelper.ParseResultValidator {
         private final static String TFVC_BRANCHES_URL_PATH = "/_apis/tfvc/branches";
         private final static String REPO_INFO_URL_PATH = "/vsts/info";
@@ -728,7 +731,7 @@ public class ServerContextManager {
          * This method queries the server with the given Git remote URL for repository, project and collection information
          * If unable to get the info, it parses the Git remote url and tries to verify it by querying the server again
          *
-         * @param gitRemoteUrl
+         * @param gitRemoteUrl The Remote URL to use
          * @return true if server information is determined
          */
         public boolean validateGitUrl(final String gitRemoteUrl) {
@@ -796,9 +799,9 @@ public class ServerContextManager {
         /**
          * This method queries the server with the given TFVC URL for collection information
          *
-         * @param collectionUrl
-         * @param teamProjectName
-         * @param possibleCollectionName
+         * @param collectionUrl TFVC Collection URL
+         * @param teamProjectName The project name to query
+         * @param possibleCollectionName Possible TFVC Collection Name
          * @return true if server information is determined
          */
         public boolean validateTfvcUrl(final String collectionUrl, final String teamProjectName, final String possibleCollectionName) {
@@ -877,8 +880,8 @@ public class ServerContextManager {
          * 0: the server url (ending in a slash)
          * 1: the collection name (no slashes)
          *
-         * @param collectionUrl
-         * @return
+         * @param collectionUrl TFVC Collection URL
+         * @return string
          */
         private String[] splitTfvcCollectionUrl(final String collectionUrl) {
             final String[] result = new String[2];
@@ -907,7 +910,7 @@ public class ServerContextManager {
             //Try to query the server endpoint for branches to see if the collection url is correct
             try {
                 VstsHttpClient.sendRequest(context.getClient(), UrlHelper.combine(collectionUrl, TFVC_BRANCHES_URL_PATH), String.class);
-                logger.info("validateTfvcCollectionUrl: validated url: " + collectionUrl);
+                logger.info("validateTfvcCollectionUrl: validated url: {}", collectionUrl);
                 return true;
             } catch (VstsHttpClient.VstsHttpClientException e) {
                 if (e.getStatusCode() == 404) {
@@ -925,8 +928,8 @@ public class ServerContextManager {
          * This method gets all the info we need from the server given the parse results.
          * If some call fails we simply return false and ignore the results.
          *
-         * @param parseResult
-         * @return
+         * @param parseResult ParseResult object
+         * @return bool
          */
         @Override
         public boolean validate(final UrlHelper.ParseResult parseResult) {
@@ -946,7 +949,7 @@ public class ServerContextManager {
                     collection = getCollectionFromServer(contextToValidate, parseResult.getCollectionName());
                 }
             } catch (Throwable throwable) {
-                logger.error("validate: failed for parseResult " + parseResult.toString());
+                logger.error("validate: failed for parseResult {}", parseResult.toString());
                 logger.warn("validate", throwable);
                 return false;
             }
