@@ -3,7 +3,7 @@ jobs:
     strategy:
       matrix:
         linux:
-          imageName: 'ubuntu-18.04'
+          imageName: 'ubuntu-24.04'
           tfClcScriptName: 'tf'
         macOS:
           imageName: 'macOS-10.15'
@@ -90,7 +90,7 @@ jobs:
 
   - job: test_build # check compilation for newest IDEA
     pool:
-      vmImage: 'ubuntu-18.04'
+      vmImage: 'ubuntu-24.04'
     steps:
       - task: CmdLine@1
         displayName: Run printenv
